@@ -1,4 +1,4 @@
-#! /bin/env python3
+#! /bin/python3
 import sys
 import ldap
 import configparser
@@ -35,8 +35,8 @@ def ldap_auth (usr = ad_bind_usr, pwd = ad_bind_pwd, address = ad_server):
 # get group members
 def get_members(groupname, ldap_conn, basedn = ad_user_basedn):
     members = []
-    members.append(f'[{groupname}]')
-    ad_filter = f'(&(objectClass=USER)(sAMAccountName=*){ad_member_of}(memberOf=cn=Alle,OU=Kopano,dc=chaos,dc=inmedias,dc=it))'
+    members.append('[{0}]'.format(groupname))
+    ad_filter = '(&(objectClass=USER)(sAMAccountName=*){0}(memberOf=cn=Alle,OU=Kopano,dc=chaos,dc=inmedias,dc=it))'.format(ad_member_of)
     result = ldap_conn.search_s(basedn, ldap.SCOPE_SUBTREE, ad_filter )
     if result:
         #print (result[0])
