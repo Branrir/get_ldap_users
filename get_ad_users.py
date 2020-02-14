@@ -1,6 +1,6 @@
-#! /bin/python3
+#! /usr/bin/python3
 import sys
-import ldap
+import ldap3 as ldap
 import configparser
 
 # Configparser
@@ -14,22 +14,13 @@ ad_bind_pwd = conf['ldap-config']['ad_bind_pwd']
 
 # Connect
 def ldap_auth (usr = ad_bind_usr, pwd = ad_bind_pwd, address = ad_server):
-    conn = ldap.initialize('ldap://' + address)
-    conn.protocol_version = 3
-    conn.set_option(ldap.OPT_REFERRALS, 0)
+    serv = ldap.Server('ldap://' + address)
+    conn = ldap.Connection(serv, ad_bind_usr, ad_bind_pwd)
 
     result = True
 
-    try:
-        conn.simple_bind_s(usr, pwd)
-        print ("connection siccesful")
-    except ldap.INVALID_CREDENTIALS:
-        return "credentils wrong", False
-    except ldap.SERVER_DOWN:
-        return "server down", False
-    except ldap.LDAPError as e:
-        return e, False
-    
+    if not conn.bind():
+        return  conn.result , False
     return conn, result
 
 # get group members
@@ -37,22 +28,15 @@ def get_members(groupname, ldap_conn, basedn = ad_user_basedn):
     members = []
     members.append('[{0}]'.format(groupname))
     ad_filter = '(&(objectClass=USER)(sAMAccountName=*){0}(memberOf=cn=Alle,OU=Kopano,dc=chaos,dc=inmedias,dc=it))'.format(ad_member_of)
-    result = ldap_conn.search_s(basedn, ldap.SCOPE_SUBTREE, ad_filter )
+    if ldap_conn.search(search_base = basedn, search_scope= ldap.SUBTREE, search_filter=ad_filter, attributes=ldap.ALL_ATTRIBUTES ):
+        result = ldap_conn.entries
     if result:
-        #print (result[0])
-        for user, attrb in result:
-            if 'mail' in attrb:
-                tmp_mail = ""
-                tmp_cn = ""
-                attr_mail = str(attrb['mail'][0])
-                attr_cn = str(attrb['cn'][0])
-                for i in range(0, len(attr_mail)):
-                    if i != 0:
-                        tmp_mail = tmp_mail + attr_mail[i]
-                for i in range(0, len(attr_cn)):
-                    if i !=0:
-                        tmp_cn = tmp_cn + attr_cn[i]
-                members.append(tmp_mail + "=" + tmp_cn)
+        print (result)
+        for user in result:
+            if 'mail' in user:
+                attr_mail = str(user['mail'])
+                attr_cn = str(user['cn'])
+                members.append(attr_mail + "=" + attr_cn)
                 
     return members
 
